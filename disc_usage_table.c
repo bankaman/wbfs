@@ -31,7 +31,7 @@ static u8 *used;
 #define fseeko _fseeki64
 #endif
 
-u8 disc_key[16];
+u8 disc_key_[16];
 int dont_decrypt = 0;
 
 static void seek(u64 offset)
@@ -68,7 +68,7 @@ static void partition_read_block(u64 blockno, u8 *block)
 
         // decrypt data
         memcpy(iv, raw + 0x3d0, 16);
-        aes_cbc_dec(disc_key, iv, raw + 0x400, 0x7c00, block);
+        aes_cbc_dec(disc_key_, iv, raw + 0x400, 0x7c00, block);
 }
 
 static void partition_read(u64 offset, u8 *data, u32 len,int fake)
@@ -222,7 +222,7 @@ static void do_partition(void)
 	partition_raw_read(cert_offset, cert, cert_size);
 
 
-	decrypt_title_key(tik, disc_key);
+	decrypt_title_key(tik, disc_key_);
 
 	partition_raw_read(h3_offset, h3, 0x18000);
 

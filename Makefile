@@ -4,12 +4,18 @@ DEFINES = -DLARGE_FILES -D_FILE_OFFSET_BITS=64
 LIBS = -lcrypto
 
 CC = gcc
-CFLAGS = -Wall -W -O3 -Ilibwbfs -I.
+CFLAGS = -Wall -W -Ilibwbfs -I.
+#CFLAGS += -O3 #optimisation
+CFLAGS += -g #debug
+#CFLAGS += -D_GNU_SOURCE
+
 #CFLAGS = -Wall -m32 -W  -ggdb -Ilibwbfs -I.
 
 # manually switch flags if you are on amd64 (should test that in makefile)
-LDFLAGS = -m32
+#LDFLAGS = -m32
 #LDFLAGS = -m64 -L/usr/lib64
+
+
 
 VPATH+=libwbfs
 OBJS = $(patsubst %,%.o,$(PROGS)) $(COMMON)

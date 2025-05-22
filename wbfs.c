@@ -331,6 +331,44 @@ void wbfs_applet_create(char**argv)
         }
 }
 
+void wbfs_applet_badblocks(wbfs_t *p, int UNUSED(argc), char** UNUSED(argv))
+{
+        wbfs_mark_badblocks(p, verbose?_spinner:_progress);
+}
+
+void wbfs_applet_readblock(wbfs_t *p, int UNUSED(argc), char** argv)
+{
+        u32 blockId = atoi(argv[0]);
+
+        u32 blockSize = p->wbfs_sec_sz / p->hd_sec_sz;
+        u32 lba = p->part_lba + blockId * blockSize;
+        u8* copy_buffer = 0;
+        copy_buffer = wbfs_ioalloc(p->wbfs_sec_sz);
+	if (!copy_buffer)
+	{
+		fprintf(stderr, "error alloc memory\n");
+                exit(1);
+	}
+
+        int err = p->read_hdsector(p->callback_data, lba, blockSize, copy_buffer);
+
+        if(err!= 0){
+                fprintf(stderr, "%s\n", strerror(errno));
+		exit(1);
+        }
+
+        fwrite(copy_buffer, p->wbfs_sec_sz,1, stdout);
+        
+        if(copy_buffer){
+		wbfs_iofree(copy_buffer);
+	}
+}
+
+void wbfs_applet_filledlist(wbfs_t *p, int UNUSED(argc), char** UNUSED(argv))
+{
+        wbfs_list_filled_blocks(p);
+}
+
 struct wbfs_applets
 {
 	char *command;
@@ -354,6 +392,9 @@ wbfs_applets[] =
         APPLET(ren,rename,2,"gameid newname \n\t\t\t\t change name of a wbfs game"),
         APPLET(nid,changeid,2,"gameid newgameid \n\t\t\t\t Change id of a wbfs game"),
         APPLET(extract,extract,1,"gameid \n\t\t\t\t extract a game iso from wbfs"),
+        APPLET(badblocks,badblocks,0," \n\t\t\t\t scan filesystem for bad blocks, and marks it as alocated"),
+        APPLET(readblock,readblock,1," \n\t\t\t\t read block to stdout"),
+        APPLET(filledlist,filledlist,0," \n\t\t\t\t filled blocks list"),
 };
 
 static int num_applets = sizeof(wbfs_applets) / sizeof(wbfs_applets[0]);

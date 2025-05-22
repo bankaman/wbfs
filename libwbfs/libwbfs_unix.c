@@ -15,6 +15,7 @@
 
 #include "libwbfs.h"
 
+
 void *wbfs_open_file_for_read(char*filename)
 {
         FILE*f = fopen(filename,"r");
@@ -181,7 +182,10 @@ wbfs_t *wbfs_try_open_partition(char *fn,int reset)
 	u32 sector_size, n_sector;
 	if(!get_capacity(fn,&sector_size,&n_sector))
 		return NULL;
-	FILE *f = fopen(fn,"r+");
+
+	int fd = open(fn, O_RDWR | O_SYNC);
+	FILE *f = fdopen(fd, "r+");
+
 	if (!f)
 		return NULL;
 	return wbfs_open_partition(wbfs_fread_sector,wbfs_fwrite_sector,f,

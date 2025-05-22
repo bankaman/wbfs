@@ -267,6 +267,8 @@ void wbfs_file_reserve_space(void*handle,long long size);
 void wbfs_file_truncate(void *handle,long long size);
 int wbfs_read_wii_file(void *_handle, u32 _offset, u32 count, void *buf);
 int wbfs_write_wii_sector_file(void *_handle, u32 lba, u32 count, void *buf);
+void wbfs_mark_badblocks(wbfs_t *p, progress_callback_t spinner);
+void wbfs_list_filled_blocks(wbfs_t *p);
 
 
 #ifdef __cplusplus
