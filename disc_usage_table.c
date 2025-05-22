@@ -31,7 +31,7 @@ static u8 *used;
 #define fseeko _fseeki64
 #endif
 
-u8 disc_key[16];
+u8 disc_key_[16];
 int dont_decrypt = 0;
 
 static void seek(u64 offset)
@@ -68,7 +68,7 @@ static void partition_read_block(u64 blockno, u8 *block)
 
         // decrypt data
         memcpy(iv, raw + 0x3d0, 16);
-        aes_cbc_dec(disc_key, iv, raw + 0x400, 0x7c00, block);
+        aes_cbc_dec(disc_key_, iv, raw + 0x400, 0x7c00, block);
 }
 
 static void partition_read(u64 offset, u8 *data, u32 len,int fake)
@@ -114,39 +114,24 @@ static void copy_file(u64 offset, u64 size)
 }
 
 
-static u32 do_fst(u8 *fst, const char *names, u32 i, char *indent, int is_last)
+static u32 do_fst(u8 *fst, const char *names, u32 i, char *indent)
 {
 	u64 offset;
 	u32 size;
-#ifdef UNUSED_STUFF
-	const char *name;
-	u32 parent;
-#endif
 	u32 j;
 
-#ifdef UNUSED_STUFF
-	name = names + (be32(fst + 12*i) & 0x00ffffff);
-#endif
 	size = be32(fst + 12*i + 8);
 
 	if (i == 0) {
 		for (j = 1; j < size; )
-			j = do_fst(fst, names, j, indent, (j == size - 1));
+			j = do_fst(fst, names, j, indent);
 		return size;
 	}
-
-#ifdef UNUSED_STUFF
-	if (fst[12*i]) {
-		parent = be32(fst + 12*i + 4);
-		is_last = (be32(fst + 12*parent + 8) == size);
-	}
-#endif
-
 
 	if (fst[12*i]) {
 
 		for (j = i + 1; j < size; )
-			j = do_fst(fst, names, j, indent, (j == size - 1));
+			j = do_fst(fst, names, j, indent);
 
 		indent[strlen(indent) - 4] = 0;
 		return size;
@@ -191,7 +176,7 @@ static void do_files(void)
 
 	indent[0] = 0;
 	if (n_files > 1)
-		do_fst(fst, (char *)fst + 12*n_files, 0, indent, 0);
+		do_fst(fst, (char *)fst + 12*n_files, 0, indent);
 
 	free(fst);
 }
@@ -237,7 +222,7 @@ static void do_partition(void)
 	partition_raw_read(cert_offset, cert, cert_size);
 
 
-	decrypt_title_key(tik, disc_key);
+	decrypt_title_key(tik, disc_key_);
 
 	partition_raw_read(h3_offset, h3, 0x18000);
 

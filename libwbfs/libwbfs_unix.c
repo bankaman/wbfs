@@ -15,6 +15,75 @@
 
 #include "libwbfs.h"
 
+
+void *wbfs_open_file_for_read(char*filename)
+{
+        FILE*f = fopen(filename,"r");
+	if (!f)
+		wbfs_fatal("unable to open file\n");
+        return (void*)f;
+}
+void *wbfs_open_file_for_write(char*filename)
+{
+        FILE*f = fopen(filename,"w");
+	if (!f)
+		wbfs_fatal("unable to open file\n");
+        return (void*)f;
+}
+int wbfs_read_file(void*handle, int len, void *buf)
+{
+        return fread(buf,len,1,(FILE*)handle);
+}
+void wbfs_close_file(void *handle)
+{
+        fclose((FILE*)handle);
+}
+void wbfs_file_reserve_space(void*handle, long long size)
+{
+        FILE*f=(FILE*)handle;
+        fseeko(f, size-1ULL, SEEK_SET);
+        fwrite("", 1, 1, f);
+}
+void wbfs_file_truncate(void *handle,long long size)
+{
+        ftruncate(fileno((FILE*)handle),size);
+}
+int wbfs_read_wii_file(void*_fp,u32 offset,u32 count,void*iobuf)
+{
+	FILE*fp =_fp;
+	u64 off = offset;
+	off<<=2;
+
+	if (fseeko(fp, off, SEEK_SET))
+	{
+		wbfs_error("error seeking in disc file (%ld)",off);
+                return 1;
+        }
+        if (fread(iobuf, count, 1, fp) != 1){
+                wbfs_error("error reading disc");
+                return 1;
+	}
+	return 0;
+}
+
+int wbfs_write_wii_sector_file(void*_fp,u32 lba,u32 count,void*iobuf)
+{
+	FILE*fp=_fp;
+	u64 off = lba;
+	off *=0x8000;
+
+	if (fseeko(fp, off, SEEK_SET))
+        {
+		wbfs_error("error seeking in disc file (%lld)",off);
+                return 1;
+        }
+        if (fwrite(iobuf, count*0x8000, 1, fp) != 1){
+                wbfs_error("error writing disc file");
+                return 1;
+        }
+        return 0;
+}
+
 static int wbfs_fread_sector(void *_fp,u32 lba,u32 count,void*buf)
 {
 	FILE*fp =_fp;
@@ -58,7 +127,12 @@ static int get_capacity(char *file,u32 *sector_size,u32 *n_sector)
 		return 0;
 	}
 #if defined(__linux__) || defined(__CYGWIN__)
-	ret = ioctl(fd,BLKSSZGET,sector_size);
+        if (sizeof(void *) == 8) {
+          unsigned long long sec_size;
+          ret = ioctl(fd,BLKSSZGET,&sec_size);
+          *sector_size = (unsigned int) sec_size;
+        } else
+          ret = ioctl(fd,BLKSSZGET,sector_size);
 #else //__APPLE__
 	ret = ioctl(fd,DKIOCGETBLOCKSIZE,sector_size);
 #endif
@@ -74,7 +148,12 @@ static int get_capacity(char *file,u32 *sector_size,u32 *n_sector)
 		return 1;
 	}
 #if defined(__linux__) || defined(__CYGWIN__)
-	ret = ioctl(fd,BLKGETSIZE,n_sector);
+        if (sizeof(void *) == 8) {
+          unsigned long long n_sec;
+          ret = ioctl(fd,BLKGETSIZE,&n_sec);
+          *n_sector = (unsigned int) n_sec;
+        } else
+          ret = ioctl(fd,BLKGETSIZE,n_sector);
 #else //__APPLE__
 	long long my_n_sector;
 	ret = ioctl(fd,DKIOCGETBLOCKCOUNT,&my_n_sector);
@@ -103,7 +182,10 @@ wbfs_t *wbfs_try_open_partition(char *fn,int reset)
 	u32 sector_size, n_sector;
 	if(!get_capacity(fn,&sector_size,&n_sector))
 		return NULL;
-	FILE *f = fopen(fn,"r+");
+
+	int fd = open(fn, O_RDWR | O_SYNC);
+	FILE *f = fdopen(fd, "r+");
+
 	if (!f)
 		return NULL;
 	return wbfs_open_partition(wbfs_fread_sector,wbfs_fwrite_sector,f,

@@ -14,8 +14,6 @@ typedef u16 be16_t;
 
 #ifdef WIN32
 #pragma pack(1)
-// A bit untidy for now - g3power
-#define ENABLE_RENAME
 #endif
  
 typedef struct wbfs_head
@@ -225,23 +223,17 @@ u32 wbfs_add_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc,
 #endif
 					);
 
-#ifdef WIN32
 u32 wbfs_estimate_disc(wbfs_t*p,read_wiidisc_callback_t read_src_wii_disc, void *callback_data,
                   partition_selector_t sel);
-#endif
 
 /*! remove a wiidvd inside a partition */
 u32 wbfs_rm_disc(wbfs_t*p, u8* discid);
 
-#ifdef ENABLE_RENAME
 /*! rename a wiidvd inside a partition */	   
 u32 wbfs_ren_disc(wbfs_t*p, u8* discid, u8* newname);	   
-#endif
 
-#ifdef ENABLE_CHANGE_DISKID
 /*! edit a wiidvd diskid */
 u32 wbfs_nid_disc(wbfs_t*p, u8* discid, u8* newid);
-#endif
 
 /*! trim the file-system to its minimum size
   This allows to use wbfs as a wiidisc container
@@ -260,6 +252,24 @@ u32 wbfs_extract_file(wbfs_disc_t*d, char *path);
 
 // remove some sanity checks
 void wbfs_set_force_mode(int force);
+
+
+/* OS specific functions provided by libwbfs_<os>.c */
+
+wbfs_t *wbfs_try_open(char *disk, char *partition, int reset);
+wbfs_t *wbfs_try_open_partition(char *fn, int reset);
+
+void *wbfs_open_file_for_read(char*filename);
+void *wbfs_open_file_for_write(char*filename);
+int wbfs_read_file(void*handle, int len, void *buf);
+void wbfs_close_file(void *handle);
+void wbfs_file_reserve_space(void*handle,long long size);
+void wbfs_file_truncate(void *handle,long long size);
+int wbfs_read_wii_file(void *_handle, u32 _offset, u32 count, void *buf);
+int wbfs_write_wii_sector_file(void *_handle, u32 lba, u32 count, void *buf);
+void wbfs_mark_badblocks(wbfs_t *p, progress_callback_t spinner);
+void wbfs_list_filled_blocks(wbfs_t *p);
+
 
 #ifdef __cplusplus
    }
